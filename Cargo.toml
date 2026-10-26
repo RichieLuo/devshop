@@ -1,0 +1,37 @@
+[package]
+name = "devshop"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.89"
+description = "A local JSON and JWT desktop workspace"
+
+[package.metadata.shop]
+product-name = "DevShop"
+
+[dependencies]
+eframe = { version = "0.33", default-features = false, features = ["default_fonts", "glow", "persistence", "x11", "wayland"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision", "float_roundtrip"] }
+ron = "0.11"
+image = { version = "0.25", default-features = false, features = ["png"] }
+regex = "1"
+sha2 = "0.10"
+base64 = "0.22"
+jsonwebtoken = "9.3.1"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+rfd = "0.15"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+raw-window-handle = "0.6"
+windows-sys = { version = "0.61", features = ["Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_Foundation", "Win32_Security", "Win32_System_LibraryLoader", "Win32_System_Threading", "Win32_UI_HiDpi", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+image = { version = "0.25", default-features = false, features = ["png", "ico"] }
+winres = "0.1"
+
+[profile.dev]
+incremental = false
+
+[profile.release]
+lto = "thin"
+strip = true

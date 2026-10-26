@@ -1,0 +1,13 @@
+{
+  "requestId": "devshop-demo",
+  "message": "这是本地合成示例，不含真实业务数据",
+  "preciseId": 9007199254740993,
+  "data": {
+    "orders": [
+      { "id": 1001, "status": "待支付", "amount": 128.50, "tags": ["测试", "普通"] },
+      { "id": 1002, "status": "已完成", "amount": 399.99, "tags": ["测试", "重点关注"] },
+      { "id": 1003, "status": "已取消", "amount": null, "tags": [] }
+    ],
+    "settings": { "enabled": true, "escaped/key": "可以复制 JSON Pointer 查看转义路径" }
+  }
+}

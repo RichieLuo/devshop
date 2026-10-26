@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="270" viewBox="0 0 1120 270">
+<rect width="1120" height="270" rx="30" fill="#f3faf8"/>
+<rect x="64" y="51" width="168" height="168" rx="30" fill="#0f766e"/>
+<g fill="none" stroke="#f6fffb" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><path d="M121 96h-10l-6 6v23l-9 10 9 10v23l6 6h10"/><path d="M175 96h10l6 6v23l9 10-9 10v23l-6 6h-10"/></g>
+<path d="m148 124 11 11-11 11-11-11z" fill="#fbbf4c"/>
+<text x="276" y="134" font-family="Segoe UI,Arial,sans-serif" font-size="66" font-weight="600" fill="#153b38">DevShop</text>
+<text x="280" y="181" font-family="Segoe UI,Arial,sans-serif" font-size="25" letter-spacing="2" fill="#57746f">JSON / JWT WORKSPACE</text>
+<text x="1000" y="154" text-anchor="middle" font-family="Consolas,monospace" font-size="62" fill="#bee1d8">{ }</text>
+</svg>
