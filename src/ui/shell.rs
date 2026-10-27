@@ -285,8 +285,7 @@ impl App {
                                     .parent_id
                                     .as_ref()
                                     .is_some_and(|id| self.entries.iter().any(|e| &e.id == id));
-                                let current = self.meta(entry.kind).parent_id.as_deref()
-                                    == Some(entry.id.as_str());
+                                let current = self.is_current_history(entry);
                                 let frame = egui::Frame::new()
                                     .fill(if current { p.accent_soft } else { p.surface })
                                     .stroke(egui::Stroke::new(
@@ -442,9 +441,9 @@ impl App {
 
     pub(super) fn dialogs(&mut self, ctx: &egui::Context) {
         if let Some(kind) = self.confirm_kind {
-            egui::Modal::new(egui::Id::new("unsaved-document")).show(ctx, |ui| {
-                ui.set_width(390.0);
-                ui.heading("保留当前修改？");
+            dialog_style::modal(ctx, "unsaved-document").show(ctx, |ui| {
+                ui.set_width(440.0);
+                dialog_style::title(ui, "保留当前修改？");
                 ui.add_space(8.0);
                 ui.label(format!(
                     "{} 工作区有未保存内容。保存完成后再继续操作。",
@@ -457,15 +456,18 @@ impl App {
                     );
                 }
                 ui.add_space(12.0);
-                ui.horizontal(|ui| {
+                dialog_style::actions(ui, |ui| {
                     if ui
-                        .add_enabled(!self.saving, egui::Button::new("保存后继续"))
+                        .add_enabled(
+                            !self.saving,
+                            dialog_style::primary("保存后继续", theme::BRAND),
+                        )
                         .clicked()
                     {
                         self.save_current(false, true, ctx);
                     }
                     if ui
-                        .add_enabled(!self.saving, egui::Button::new("放弃修改并继续"))
+                        .add_enabled(!self.saving, egui::Button::new("不保存并继续"))
                         .clicked()
                     {
                         self.discard_and_continue(ctx);
@@ -484,12 +486,18 @@ impl App {
             });
         }
         if self.clear_history_confirm {
-            egui::Modal::new(egui::Id::new("clear-history")).show(ctx, |ui| {
-                ui.set_width(360.0);
-                ui.heading("清理历史记录？");
+            dialog_style::modal(ctx, "clear-history").show(ctx, |ui| {
+                ui.set_width(440.0);
+                dialog_style::title(ui, "清理历史记录？");
                 ui.label("将删除未收藏的本地历史快照，已保存的文档文件不受影响。");
-                ui.horizontal(|ui| {
-                    if ui.button("清理未收藏记录").clicked() {
+                dialog_style::actions(ui, |ui| {
+                    if ui
+                        .add(dialog_style::primary(
+                            "清理未收藏记录",
+                            egui::Color32::from_rgb(187, 55, 55),
+                        ))
+                        .clicked()
+                    {
                         let _ = self.history.sender.send(HistoryCommand::Clear);
                         self.clear_history_confirm = false;
                     }

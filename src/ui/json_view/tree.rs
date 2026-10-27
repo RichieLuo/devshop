@@ -1,5 +1,8 @@
 use super::*;
 
+#[cfg(test)]
+mod tests;
+
 const ROW_HEIGHT: f32 = 25.0;
 
 impl JsonWorkspace {
@@ -59,15 +62,7 @@ impl JsonWorkspace {
     pub(super) fn poll_rows(&mut self) {
         if let Some(task) = self.row_task.take() {
             match task.receiver.try_recv() {
-                Ok(rows) => {
-                    self.rows = rows;
-                    if let Some(selected) = self.selected {
-                        self.scroll_to_row = self
-                            .rows
-                            .binary_search_by_key(&selected, |row| row.node)
-                            .ok();
-                    }
-                }
+                Ok(rows) => self.rows = rows,
                 Err(mpsc::TryRecvError::Empty) => self.row_task = Some(task),
                 Err(mpsc::TryRecvError::Disconnected) => {
                     self.action_error = Some("树形视图构建已中断，请重新展开节点".into())
@@ -127,7 +122,12 @@ impl JsonWorkspace {
         let mut scroll = egui::ScrollArea::both()
             .id_salt("json-tree-scroll")
             .auto_shrink([false, false]);
-        if let Some(row) = self.scroll_to_row.take() {
+        // Only explicit navigation moves the viewport. Keep the node ID until
+        // async expansion finishes, since rebuilding can change row indices.
+        if self.row_task.is_none()
+            && let Some(node) = self.scroll_to_node.take()
+            && let Ok(row) = self.rows.binary_search_by_key(&node, |row| row.node)
+        {
             let offset = row as f32 * (ROW_HEIGHT + ui.spacing().item_spacing.y)
                 - ui.available_height() * 0.4;
             scroll = scroll.vertical_scroll_offset(offset.max(0.0));

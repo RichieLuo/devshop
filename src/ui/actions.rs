@@ -205,10 +205,15 @@ impl App {
             } => {
                 self.file_sequence += 1;
                 meta.session = self.file_sequence;
+                let restoring_history = meta.parent_id.is_some();
                 self.active = kind;
                 *self.meta_mut(kind) = meta;
                 match kind {
-                    ContentKind::Json => self.json.set_source(text, dirty, "载入 JSON"),
+                    ContentKind::Json => self.json.set_source(
+                        text,
+                        dirty,
+                        (!restoring_history).then_some("载入 JSON"),
+                    ),
                     ContentKind::Jwt => {
                         self.jwt.set_token(&text);
                         self.jwt_saved = if dirty {
@@ -216,7 +221,9 @@ impl App {
                         } else {
                             self.jwt.token().to_string()
                         };
-                        self.record(kind, Arc::from(self.jwt.token()), "载入 JWT");
+                        if !restoring_history {
+                            self.record(kind, Arc::from(self.jwt.token()), "载入 JWT");
+                        }
                     }
                 }
                 self.status = format!("来源：{}", self.meta(kind).origin);
@@ -230,7 +237,7 @@ impl App {
                     ..Default::default()
                 };
                 match kind {
-                    ContentKind::Json => self.json.set_source(String::new(), false, "新建"),
+                    ContentKind::Json => self.json.set_source(String::new(), false, None),
                     ContentKind::Jwt => {
                         self.jwt = JwtWorkspace::default();
                         self.jwt_saved.clear();

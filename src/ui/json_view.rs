@@ -47,13 +47,13 @@ pub struct JsonWorkspace {
     view: View,
     work: Option<WorkTask>,
     parse_due: Option<Instant>,
-    operation: String,
+    operation: Option<String>,
     lines: Arc<Vec<usize>>,
     expanded: HashSet<NodeId>,
     rows: Vec<Row>,
     row_task: Option<RowsTask>,
     selected: Option<NodeId>,
-    scroll_to_row: Option<usize>,
+    scroll_to_node: Option<NodeId>,
     detail_text: String,
     detail_path: String,
     detail_pointer: String,
@@ -83,7 +83,7 @@ enum WorkResult {
         source: Arc<str>,
         document: Result<Document, JsonError>,
         lines: Vec<usize>,
-        operation: String,
+        operation: Option<String>,
         elapsed_ms: f64,
         dirty: bool,
     },
@@ -116,13 +116,13 @@ impl JsonWorkspace {
             view: View::Source,
             work: None,
             parse_due: None,
-            operation: "编辑".into(),
+            operation: Some("编辑".into()),
             lines: Arc::new(vec![0]),
             expanded: HashSet::new(),
             rows: Vec::new(),
             row_task: None,
             selected: None,
-            scroll_to_row: None,
+            scroll_to_node: None,
             detail_text: String::new(),
             detail_path: String::new(),
             detail_pointer: String::new(),
@@ -143,20 +143,22 @@ impl JsonWorkspace {
         }
     }
 
-    pub fn set_source(&mut self, text: String, dirty: bool, operation: &str) {
+    /// `None` restores a snapshot without emitting a new history event.
+    pub fn set_source(&mut self, text: String, dirty: bool, operation: Option<&str>) {
         self.welcome = text.is_empty();
         self.cancel_work();
         self.cancel_search();
         self.cancel_rows();
         self.source = Arc::from(text);
         self.dirty = dirty;
-        self.operation = operation.into();
+        self.operation = operation.map(str::to_owned);
         self.parse_due = None;
         self.document = None;
         self.error = None;
         self.action_error = None;
         self.rows.clear();
         self.selected = None;
+        self.scroll_to_node = None;
         self.detail_text.clear();
         self.editing_node = false;
         self.lines = Arc::new(vec![0]);
@@ -250,7 +252,7 @@ impl JsonWorkspace {
                     } else {
                         String::new()
                     };
-                    if matches!(operation.as_str(), "格式化" | "压缩") {
+                    if matches!(operation.as_deref(), Some("格式化" | "压缩")) {
                         self.view = View::Source;
                     }
                     match document {
@@ -262,12 +264,15 @@ impl JsonWorkspace {
                             self.expanded.insert(0);
                             self.selected = None;
                             self.select_node(0);
+                            self.scroll_to_node = Some(0);
                             self.rebuild_rows();
                             self.schedule_search();
-                            events.push(JsonEvent::Parsed {
-                                source: Arc::clone(&self.source),
-                                operation,
-                            });
+                            if let Some(operation) = operation {
+                                events.push(JsonEvent::Parsed {
+                                    source: Arc::clone(&self.source),
+                                    operation,
+                                });
+                            }
                         }
                         Err(error) => {
                             self.document = None;
@@ -343,22 +348,32 @@ impl JsonWorkspace {
             });
         }
         if self.view == View::Tree {
+            let max_details_width = (ui.available_width() - 280.0).clamp(230.0, 650.0);
             egui::SidePanel::right("json-node-details")
                 .resizable(true)
+                .show_separator_line(false)
                 .default_width(330.0)
-                .width_range(230.0..=650.0)
-                .frame(theme::card(ui).outer_margin(egui::Margin {
-                    left: 12,
-                    ..Default::default()
-                }))
+                .width_range(230.0..=max_details_width)
+                .frame(egui::Frame::NONE)
                 .show_inside(ui, |ui| {
-                    egui::ScrollArea::vertical()
-                        .id_salt("json-details-scroll")
-                        .auto_shrink([false, false])
-                        .show(ui, |ui| self.show_details(ui));
+                    // Split the gap across both cards so resizing never hits a card border.
+                    theme::card(ui)
+                        .outer_margin(egui::Margin {
+                            left: 6,
+                            ..Default::default()
+                        })
+                        .show(ui, |ui| {
+                            egui::ScrollArea::vertical()
+                                .id_salt("json-details-scroll")
+                                .auto_shrink([false, false])
+                                .show(ui, |ui| self.show_details(ui));
+                        });
                 });
             egui::CentralPanel::default()
-                .frame(theme::card(ui))
+                .frame(theme::card(ui).outer_margin(egui::Margin {
+                    right: 6,
+                    ..Default::default()
+                }))
                 .show_inside(ui, |ui| self.show_tree(ui));
         } else {
             theme::card(ui).show(ui, |ui| {

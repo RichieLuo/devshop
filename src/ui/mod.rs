@@ -1,5 +1,6 @@
 mod actions;
 mod background;
+mod dialog_style;
 pub mod floating;
 mod json_view;
 mod jwt_view;
@@ -7,6 +8,9 @@ mod shell;
 mod theme;
 mod welcome;
 mod window_chrome;
+
+#[cfg(test)]
+mod tests;
 
 use background::{DocumentMeta, FileReply, HistoryCommand, HistoryWorker};
 use devshop::storage::{ContentKind, HistoryEntry, HistoryStore};
@@ -98,15 +102,23 @@ impl App {
             .storage
             .and_then(|s| eframe::get_value(s, "devshop-settings"))
             .unwrap_or_default();
+        let store = HistoryStore::open(devshop::storage::default_data_directory());
+        Self::with_history(&cc.egui_ctx, settings, store)
+    }
+
+    fn with_history(
+        ctx: &egui::Context,
+        settings: Settings,
+        store: Result<HistoryStore, String>,
+    ) -> Self {
         let mut floating = FloatingBall::default();
         floating.enabled = settings.floating_enabled;
         floating.set_position(settings.floating_position);
-        let store = HistoryStore::open(devshop::storage::default_data_directory());
         let history_store = store.as_ref().ok().cloned();
-        let history = HistoryWorker::start(store, cc.egui_ctx.clone());
+        let history = HistoryWorker::start(store, ctx.clone());
         let (files_tx, files_rx) = mpsc::channel();
         let mut app = Self {
-            json: JsonWorkspace::new(&cc.egui_ctx),
+            json: JsonWorkspace::new(ctx),
             jwt: JwtWorkspace::default(),
             active: ContentKind::Json,
             json_meta: DocumentMeta {
@@ -137,7 +149,7 @@ impl App {
             paste_requested: None,
             main_hidden: false,
         };
-        app.apply_theme(&cc.egui_ctx);
+        app.apply_theme(ctx);
         app
     }
 
@@ -162,6 +174,10 @@ impl App {
             ContentKind::Json => &mut self.json_meta,
             ContentKind::Jwt => &mut self.jwt_meta,
         }
+    }
+    fn is_current_history(&self, entry: &HistoryEntry) -> bool {
+        self.active == entry.kind
+            && self.meta(entry.kind).parent_id.as_deref() == Some(entry.id.as_str())
     }
     fn source(&self, kind: ContentKind) -> Arc<str> {
         match kind {

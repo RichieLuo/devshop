@@ -210,10 +210,9 @@ impl JsonWorkspace {
         }
         self.select_node(id);
         self.view = View::Tree;
+        self.scroll_to_node = Some(id);
         if changed {
             self.rebuild_rows();
-        } else {
-            self.scroll_to_row = self.rows.binary_search_by_key(&id, |row| row.node).ok();
         }
     }
 }

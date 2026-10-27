@@ -60,7 +60,7 @@ impl JsonWorkspace {
             }
             let result = analyze(
                 output,
-                if pretty { "格式化" } else { "压缩" }.into(),
+                Some(if pretty { "格式化" } else { "压缩" }.into()),
                 true,
                 &worker_cancel,
             );
@@ -115,7 +115,12 @@ impl JsonWorkspace {
             output.push_str(&document.source()[..range.start]);
             output.push_str(&replacement);
             output.push_str(&document.source()[range.end..]);
-            let result = analyze(Arc::from(output), "修改节点".into(), true, &worker_cancel);
+            let result = analyze(
+                Arc::from(output),
+                Some("修改节点".into()),
+                true,
+                &worker_cancel,
+            );
             if !worker_cancel.load(Ordering::Relaxed) {
                 let _ = sender.send(result);
                 ctx.request_repaint();
@@ -144,14 +149,19 @@ impl JsonWorkspace {
         self.error = None;
         self.action_error = None;
         self.dirty = true;
-        self.operation = "编辑".into();
+        self.operation = Some("编辑".into());
         self.parse_due = Some(Instant::now() + Duration::from_millis(550));
         self.context
             .request_repaint_after(Duration::from_millis(550));
     }
 }
 
-fn analyze(source: Arc<str>, operation: String, dirty: bool, cancelled: &AtomicBool) -> WorkResult {
+fn analyze(
+    source: Arc<str>,
+    operation: Option<String>,
+    dirty: bool,
+    cancelled: &AtomicBool,
+) -> WorkResult {
     let started = Instant::now();
     let document = json::parse_arc_with_cancel(Arc::clone(&source), cancelled);
     let mut lines = vec![0];

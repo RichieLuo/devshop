@@ -105,6 +105,35 @@ fn text_buffer_retains_invalid_input_until_corrected() {
 }
 
 #[test]
+fn restored_snapshot_parses_without_recording_but_edits_still_emit_events() {
+    let ctx = egui::Context::default();
+    let mut workspace = JsonWorkspace::new(&ctx);
+    workspace.set_source(r#"{"a":1}"#.into(), true, None);
+    let finish = |workspace: &mut JsonWorkspace| {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        let mut events = Vec::new();
+        while workspace.busy() && Instant::now() < deadline {
+            events.extend(workspace.poll(&ctx));
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(!workspace.busy());
+        events
+    };
+    assert!(finish(&mut workspace).is_empty());
+    assert!(workspace.document.is_some());
+    assert!(workspace.error.is_none());
+    assert_eq!(workspace.source.as_ref(), r#"{"a":1}"#);
+
+    workspace.edit_text = r#"{"a":2}"#.into();
+    workspace.source_edited();
+    workspace.launch_parse();
+    let events = finish(&mut workspace);
+    assert_eq!(events.len(), 1);
+    assert!(matches!(&events[0], JsonEvent::Parsed { source, operation }
+        if source.as_ref() == r#"{"a":2}"# && operation == "编辑"));
+}
+
+#[test]
 fn large_tree_frame_paints_a_viewport_instead_of_every_node() {
     let mut source = String::from("[");
     for index in 0..100_000 {
