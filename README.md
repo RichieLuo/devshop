@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/branding/devshop-icon.png" alt="DevShop 小熊猫标志" width="560">
+  <img src="assets/branding/devshop-red-panda-logo.png" alt="DevShop 小熊猫标志" width="560">
 </p>
 
 # DevShop
